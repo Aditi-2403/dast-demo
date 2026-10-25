@@ -13,8 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Build Docker image
         run: docker build -t dast-demo .
@@ -38,19 +37,20 @@ jobs:
 
       - name: Run OWASP ZAP Baseline Scan
         run: |
+          mkdir -p "$GITHUB_WORKSPACE/zap-output"
+          chmod 777 "$GITHUB_WORKSPACE/zap-output"
           docker run --rm --network dast-net \
-            -v "$GITHUB_WORKSPACE:/zap/wrk/:rw" \
+            -v "$GITHUB_WORKSPACE/zap-output:/zap/wrk/:rw" \
             ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py -t http://dast-app:5000 -I -J zap-report.json -r zap-report.html
+            zap-baseline.py -t http://dast-app:5000 -I \
+            -J zap-report.json -r zap-report.html
 
       - name: Upload ZAP reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zap-dast-report
-          path: |
-            zap-report.html
-            zap-report.json
+          path: zap-output/
           if-no-files-found: warn
 
       - name: Cleanup
